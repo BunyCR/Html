@@ -3,150 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yılan Oyunu - Kontrol Tuşlu</title>
+    <title>SnapLoad | Video Downloader</title>
     <style>
-        body {
-            background: #222;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            color: white;
-            font-family: sans-serif;
-            touch-action: manipulation; /* Mobilde çift tıklama zoomunu engeller */
+        :root {
+            --primary: #00ff88;
+            --secondary: #0099ff;
+            --bg: #0a0a0f;
+            --card-bg: #151520;
+            --input-bg: #1a1a25;
+            --text: #ffffff;
+            --border: #2a2a35;
         }
-        canvas {
-            background: #000;
-            border: 3px solid #0f0;
-            max-width: 90vw;
-        }
-        .controls {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: repeat(3, 60px);
-            grid-template-rows: repeat(2, 60px);
-            gap: 10px;
-        }
-        .btn {
-            width: 60px;
-            height: 60px;
-            background: #444;
-            border: 2px solid #0f0;
-            color: white;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            border-radius: 8px;
-            user-select: none;
-        }
-        .btn:active { background: #666; }
-        .up { grid-column: 2; }
-        .left { grid-column: 1; grid-row: 2; }
-        .down { grid-column: 2; grid-row: 2; }
-        .right { grid-column: 3; grid-row: 2; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: var(--card-bg); padding: 40px; border-radius: 20px; border: 1px solid var(--border); width: 90%; max-width: 500px; text-align: center; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+        h1 { font-size: 2.5rem; margin-bottom: 10px; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
+        p { color: #888; margin-bottom: 30px; }
+        input { width: 100%; padding: 18px; background: var(--input-bg); border: 2px solid var(--border); border-radius: 12px; color: white; font-size: 1rem; outline: none; margin-bottom: 20px; box-sizing: border-box; }
+        input:focus { border-color: var(--primary); }
+        button { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; border-radius: 12px; color: #000; font-size: 1rem; font-weight: 700; cursor: pointer; text-transform: uppercase; }
+        #result { margin-top: 30px; display: none; }
+        .thumbnail { width: 100%; border-radius: 12px; margin-bottom: 15px; }
+        .loader { display: none; margin: 20px auto; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,.1); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
-    <h2 id="score">Skor: 0</h2>
-    <canvas id="game" width="400" height="400"></canvas>
-
-    <div class="controls">
-        <div class="btn up" onclick="setDir('UP')">▲</div>
-        <div class="btn left" onclick="setDir('LEFT')">◀</div>
-        <div class="btn down" onclick="setDir('DOWN')">▼</div>
-        <div class="btn right" onclick="setDir('RIGHT')">▶</div>
+    <div class="container">
+        <h1>SnapLoad</h1>
+        <p>Instagram, TikTok, YouTube ve fazlası...</p>
+        <form id="dlForm">
+            <input type="url" name="url" placeholder="Link yapıştır..." required>
+            <button type="submit" id="btn">Analiz Et</button>
+        </form>
+        <div class="loader" id="loader"></div>
+        <div id="result">
+            <img id="thumb" class="thumbnail" src="">
+            <div id="title" style="margin-bottom:15px;"></div>
+            <a id="link" href="" target="_blank"><button style="background:#fff;">İndir</button></a>
+        </div>
     </div>
-
-<script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-    const scoreElement = document.getElementById("score");
-
-    const box = 20;
-    let snake = [{ x: 200, y: 200 }];
-    let direction = "RIGHT";
-    let nextDirection = "RIGHT";
-    let score = 0;
-
-    let food = {
-        x: Math.floor(Math.random() * 20) * box,
-        y: Math.floor(Math.random() * 20) * box
-    };
-
-    // Klavye Kontrolü
-    document.addEventListener("keydown", (e) => {
-        if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault();
-        if (e.key === "ArrowLeft") setDir('LEFT');
-        if (e.key === "ArrowUp") setDir('UP');
-        if (e.key === "ArrowRight") setDir('RIGHT');
-        if (e.key === "ArrowDown") setDir('DOWN');
-    });
-
-    // Yön Değiştirme Fonksiyonu (Hem buton hem klavye kullanır)
-    function setDir(newDir) {
-        if (newDir === "LEFT" && direction !== "RIGHT") nextDirection = "LEFT";
-        else if (newDir === "UP" && direction !== "DOWN") nextDirection = "UP";
-        else if (newDir === "RIGHT" && direction !== "LEFT") nextDirection = "RIGHT";
-        else if (newDir === "DOWN" && direction !== "UP") nextDirection = "DOWN";
-    }
-
-    function draw() {
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        direction = nextDirection;
-
-        for (let i = 0; i < snake.length; i++) {
-            ctx.fillStyle = (i === 0) ? "lime" : "green";
-            ctx.fillRect(snake[i].x, snake[i].y, box - 2, box - 2);
-        }
-
-        ctx.fillStyle = "red";
-        ctx.fillRect(food.x, food.y, box, box);
-
-        let headX = snake[0].x;
-        let headY = snake[0].y;
-
-        if (direction === "LEFT") headX -= box;
-        if (direction === "UP") headY -= box;
-        if (direction === "RIGHT") headX += box;
-        if (direction === "DOWN") headY += box;
-
-        if (headX === food.x && headY === food.y) {
-            score++;
-            scoreElement.innerText = "Skor: " + score;
-            food = {
-                x: Math.floor(Math.random() * 20) * box,
-                y: Math.floor(Math.random() * 20) * box
-            };
-        } else {
-            snake.pop();
-        }
-
-        let newHead = { x: headX, y: headY };
-
-        if (headX < 0 || headY < 0 || headX >= canvas.width || headY >= canvas.height || collision(newHead, snake)) {
-            clearInterval(game);
-            alert("Oyun Bitti! Skorunuz: " + score);
-            location.reload();
-        }
-
-        snake.unshift(newHead);
-    }
-
-    function collision(head, array) {
-        for (let i = 0; i < array.length; i++) {
-            if (head.x === array[i].x && head.y === array[i].y) return true;
-        }
-        return false;
-    }
-
-    let game = setInterval(draw, 180);
-</script>
+    <script>
+        const form = document.getElementById('dlForm');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            const res = await fetch('/indir', { method: 'POST', body: new FormData(form) });
+            const data = await res.json();
+            document.getElementById('loader').style.display = 'none';
+            if(data.url) {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('thumb').src = data.thumb;
+                document.getElementById('title').innerText = data.title;
+                document.getElementById('link').href = data.url;
+            } else { alert('Hata!'); }
+        };
+    </script>
 </body>
 </html>
